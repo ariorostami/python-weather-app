@@ -11,13 +11,29 @@ import threading
 import numpy as np
 from sklearn.linear_model import LinearRegression
 from sklearn.model_selection import train_test_split
+from loguru import logger
+
+# Log configuration
+logger.add("weather_app.log", rotation="500 MB", level="INFO")
 
 def fetch_weather_data(city, api_key):
     print(city)
     base_url = "http://api.openweathermap.org/data/2.5/weather"
     complete_url = f"{base_url}?q={city}&appid={api_key}"
-    response = requests.get(complete_url)
-    return response.json()
+    # response = requests.get(complete_url)
+    # return response.json()
+    try:
+        response = requests.get(complete_url)
+        if response.status_code == 200:
+            data = response.json()
+            logger.info(f"Successful response. Data: {str(data)[:100]}")
+            return data
+        else:
+            logger.warning(f"Failed to fetch weather data. Status code: {response.status_code}")
+            return None
+    except Exception as e:
+        logger.error(f"An error occurred while fetching weather data: {e}")
+        return None
 
 def save_to_json(data, filename="weather_data.json"):
     try:
@@ -197,8 +213,7 @@ def create_gui(api_key):
         print(f"Selected city: {selected_city}")
 
         # Refresh the currently visible frame
-        current_frame = main_frame.winfo_children()[0]
-        show_frame(current_frame)
+        show_frame(current_weather_frame)
 
     selected_city_var = tk.StringVar()
     cities = ["Ohama", "Paris"]
