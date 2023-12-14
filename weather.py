@@ -57,7 +57,7 @@ def plot_history(data, time_range, city_name):
     plot = fig.add_subplot(111)
     plot.plot(times, temperatures, marker='o')
     plot.set_xlabel('Time')
-    plot.set_ylabel('Temperature (K)')
+    plot.set_ylabel('Temperature (F)')
     plot.set_title(f'Weather History in {city_name} - Last {time_range} Hours')
     plot.grid(True)
 
@@ -102,7 +102,7 @@ def print_new_reading(data):
     print(f"Description: {data['weather'][0]['description']}")
     print(f"Time: {data['datetime']}")
 
-def predict_tomorrow(predict_tomorrow_label):
+def predict_tomorrow():
     try:
         data = load_from_json()
 
@@ -128,18 +128,18 @@ def predict_tomorrow(predict_tomorrow_label):
         tomorrow_timestamp = tomorrow_date.timestamp()
         tomorrow_temperature = model.predict([[tomorrow_timestamp]])
 
-        predict_tomorrow_label.config(text=f"Predicted temperature for tomorrow: {tomorrow_temperature[0]} °F")
-        print(f"Predicted temperature for tomorrow: {tomorrow_temperature[0]}")
-        return f"Predicted temperature for tomorrow: {tomorrow_temperature[0]}"
+        
+        print(f"Predicted temperature for tomorrow: {tomorrow_temperature[0]} °F")
+        return f"Predicted temperature for tomorrow: {tomorrow_temperature[0]} °F"
     except Exception as e:
         print(f"An error occurred while predicting tomorrow's temperature: {e}")
-        predict_tomorrow_label.config(text=f"Error: {e}")
+        return f"An error occurred while predicting tomorrow's temperature: {e}"
 
 
 def create_gui(api_key):
-    def show_predict_tomorrow():
-        predict_tomorrow(predict_tomorrow_label)
-        show_frame(current_weather_frame)
+    def show_predict_tomorrow_frame():
+        predict_text = predict_tomorrow()
+        tomorrow_weather_label.config(text=predict_text)
 
     def refresh_current_weather():
         last_data = load_from_json()
@@ -171,25 +171,23 @@ def create_gui(api_key):
 
     current_weather_frame = ttk.Frame(main_frame)
     history_frame = ttk.Frame(main_frame)
+    predict_tomorrow_frame = ttk.Frame(main_frame)
 
-    for frame in (current_weather_frame, history_frame):
+    for frame in (current_weather_frame, history_frame, predict_tomorrow_frame):
         frame.grid(row=0, column=0, sticky='nsew')
 
     current_weather_label = ttk.Label(current_weather_frame, text="", font=("Helvetica", 16))
     current_weather_label.grid(row=0, column=0, padx=20, pady=20)
 
-    predict_tomorrow_label = ttk.Label(current_weather_frame, text="", font=("Helvetica", 16), foreground="blue")
-    predict_tomorrow_label.grid(row=2, column=0, padx=20, pady=10)
-
-    dismiss_button = tk.Button(current_weather_frame, text="X", fg="red", command=lambda: predict_tomorrow_label.config(text=""))
-    dismiss_button.grid(row=2, column=1)
+    tomorrow_weather_label = ttk.Label(predict_tomorrow_frame, text="", font=("Helvetica", 16))
+    tomorrow_weather_label.grid(row=0, column=0, padx=20, pady=20)
 
     control_frame = ttk.Frame(main_frame)
     control_frame.grid(row=1, column=0, sticky='ew')
 
     ttk.Button(control_frame, text="Current Weather", command=lambda: show_frame(current_weather_frame)).grid(row=0, column=0, padx=5, pady=5)
     ttk.Button(control_frame, text="History", command=lambda: show_frame(history_frame)).grid(row=0, column=1, padx=5, pady=5)
-    ttk.Button(control_frame, text="Predict Tomorrow", command=show_predict_tomorrow).grid(row=0, column=2, padx=5, pady=5)
+    ttk.Button(control_frame, text="Predict Tomorrow", command=lambda: show_frame(predict_tomorrow_frame)).grid(row=0, column=2, padx=5, pady=5)
 
     global city_name
     def on_combobox_selected(event):
@@ -215,6 +213,8 @@ def create_gui(api_key):
             refresh_current_weather()
         elif frame == history_frame:
             show_history(24)  # Default to 24 hours
+        elif frame == predict_tomorrow_frame:
+            show_predict_tomorrow_frame()
 
     # Start the GUI with an initial city
     city_name = cities[0]
