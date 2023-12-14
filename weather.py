@@ -129,6 +129,8 @@ def predict_tomorrow(predict_tomorrow_label):
         tomorrow_temperature = model.predict([[tomorrow_timestamp]])
 
         predict_tomorrow_label.config(text=f"Predicted temperature for tomorrow: {tomorrow_temperature[0]} °F")
+        print(f"Predicted temperature for tomorrow: {tomorrow_temperature[0]}")
+        return f"Predicted temperature for tomorrow: {tomorrow_temperature[0]}"
     except Exception as e:
         print(f"An error occurred while predicting tomorrow's temperature: {e}")
         predict_tomorrow_label.config(text=f"Error: {e}")
@@ -166,7 +168,7 @@ def create_gui(api_key):
     current_weather_frame = ttk.Frame(main_frame)
     history_frame = ttk.Frame(main_frame)
 
-    for frame in (current_weather_frame, history_frame):
+    for frame in (current_weather_frame, history_frame, predict_tomorrow_frame):
         frame.grid(row=0, column=0, sticky='nsew')
 
     current_weather_label = ttk.Label(current_weather_frame, text="", font=("Helvetica", 16))
