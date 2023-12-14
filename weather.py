@@ -8,6 +8,9 @@ import time
 import json
 from datetime import datetime, timedelta
 import threading
+import numpy as np
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
 
 def fetch_weather_data(city, api_key):
     print(city)
@@ -99,6 +102,36 @@ def print_new_reading(data):
     print(f"Description: {data['weather'][0]['description']}")
     print(f"Time: {data['datetime']}")
 
+def predict_tomorrow():
+    try:
+        data = load_from_json()
+
+        # Extract features (X) and target variable (y)
+        dates = [datetime.fromisoformat(entry["datetime"]).timestamp() for entry in data]
+        temperatures = [entry["main"]["temp"] for entry in data]
+
+        # Reshape the data
+        X = np.array(dates).reshape(-1, 1)
+        y = np.array(temperatures)
+
+        # Split the data into training and testing sets
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+        # Create a linear regression model
+        model = LinearRegression()
+
+        # Train the model
+        model.fit(X_train, y_train)
+
+        # Predict tomorrow's temperature
+        tomorrow_date = datetime.now() + timedelta(days=1)
+        tomorrow_timestamp = tomorrow_date.timestamp()
+        tomorrow_temperature = model.predict([[tomorrow_timestamp]])
+
+        print(f"Predicted temperature for tomorrow: {tomorrow_temperature[0]}")
+    except Exception as e:
+        print(f"An error occurred while predicting tomorrow's temperature: {e}")
+
 def create_gui(api_key):
     def refresh_current_weather():
         last_data = load_from_json()
@@ -122,6 +155,7 @@ def create_gui(api_key):
         canvas_widget = canvas.get_tk_widget()
         canvas_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
+        
     root = tk.Tk()
     root.title("Weather Data Application")
 
@@ -130,6 +164,7 @@ def create_gui(api_key):
 
     current_weather_frame = ttk.Frame(main_frame)
     history_frame = ttk.Frame(main_frame)
+    predict_tomorrow_frame = ttk.Frame(main_frame)
 
     for frame in (current_weather_frame, history_frame):
         frame.grid(row=0, column=0, sticky='nsew')
@@ -142,6 +177,7 @@ def create_gui(api_key):
 
     ttk.Button(control_frame, text="Current Weather", command=lambda: show_frame(current_weather_frame)).grid(row=0, column=0, padx=5, pady=5)
     ttk.Button(control_frame, text="History", command=lambda: show_frame(history_frame)).grid(row=0, column=1, padx=5, pady=5)
+    ttk.Button(control_frame, text="Predict Tomorrow", command=lambda: show_frame(predict_tomorrow_frame)).grid(row=0, column=2, padx=5, pady=5)
     global city_name
     def on_combobox_selected(event):
         selected_city = combobox.get()
@@ -152,9 +188,9 @@ def create_gui(api_key):
 
     selected_city_var = tk.StringVar()
     cities = ["Ohama", "Paris"]
-    combobox = ttk.Combobox(root, textvariable=selected_city_var, values=cities)
+    combobox = ttk.Combobox(control_frame, textvariable=selected_city_var, values=cities)
     combobox.set(cities[0])  # Default text when the ComboBox is not selected
-    combobox.grid(row=0, column=3, padx=10, pady=10)
+    combobox.grid(row=0, column=3, padx=5, pady=5)
 
     def show_frame(frame):
         frame.tkraise()
@@ -162,6 +198,8 @@ def create_gui(api_key):
             refresh_current_weather()
         elif frame == history_frame:
             show_history(24)  # Default to 24 hours
+        elif frame == predict_tomorrow_frame:
+            predict_tomorrow()
 
     combobox.bind("<<ComboboxSelected>>", on_combobox_selected)
 
