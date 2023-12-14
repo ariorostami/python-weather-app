@@ -129,6 +129,7 @@ def predict_tomorrow():
         tomorrow_temperature = model.predict([[tomorrow_timestamp]])
 
         print(f"Predicted temperature for tomorrow: {tomorrow_temperature[0]}")
+        return f"Predicted temperature for tomorrow: {tomorrow_temperature[0]}"
     except Exception as e:
         print(f"An error occurred while predicting tomorrow's temperature: {e}")
 
@@ -155,6 +156,9 @@ def create_gui(api_key):
         canvas_widget = canvas.get_tk_widget()
         canvas_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
+    def show_predict_tomorrow_frame():
+        predict_text = predict_tomorrow()
+        tomorrow_weather_label.config(text=predict_text)
         
     root = tk.Tk()
     root.title("Weather Data Application")
@@ -166,11 +170,14 @@ def create_gui(api_key):
     history_frame = ttk.Frame(main_frame)
     predict_tomorrow_frame = ttk.Frame(main_frame)
 
-    for frame in (current_weather_frame, history_frame):
+    for frame in (current_weather_frame, history_frame, predict_tomorrow_frame):
         frame.grid(row=0, column=0, sticky='nsew')
 
     current_weather_label = ttk.Label(current_weather_frame, text="", font=("Helvetica", 16))
     current_weather_label.grid(row=0, column=0, padx=20, pady=20)
+
+    tomorrow_weather_label = ttk.Label(predict_tomorrow_frame, text="", font=("Helvetica", 16))
+    tomorrow_weather_label.grid(row=0, column=0, padx=20, pady=20)
 
     control_frame = ttk.Frame(main_frame)
     control_frame.grid(row=1, column=0, sticky='ew')
@@ -199,7 +206,7 @@ def create_gui(api_key):
         elif frame == history_frame:
             show_history(24)  # Default to 24 hours
         elif frame == predict_tomorrow_frame:
-            predict_tomorrow()
+            show_predict_tomorrow_frame()
 
     combobox.bind("<<ComboboxSelected>>", on_combobox_selected)
 
