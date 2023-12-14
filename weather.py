@@ -102,7 +102,7 @@ def print_new_reading(data):
     print(f"Description: {data['weather'][0]['description']}")
     print(f"Time: {data['datetime']}")
 
-def predict_tomorrow():
+def predict_tomorrow(predict_tomorrow_label):
     try:
         data = load_from_json()
 
@@ -128,9 +128,11 @@ def predict_tomorrow():
         tomorrow_timestamp = tomorrow_date.timestamp()
         tomorrow_temperature = model.predict([[tomorrow_timestamp]])
 
-        print(f"Predicted temperature for tomorrow: {tomorrow_temperature[0]}")
+        predict_tomorrow_label.config(text=f"Predicted temperature for tomorrow: {tomorrow_temperature[0]} °F")
     except Exception as e:
         print(f"An error occurred while predicting tomorrow's temperature: {e}")
+        predict_tomorrow_label.config(text=f"Error: {e}")
+
 
 def create_gui(api_key):
     def refresh_current_weather():
@@ -143,7 +145,7 @@ def create_gui(api_key):
                         f"Temperature: {current_data['main']['temp']} F\n"
                         f"Pressure: {current_data['main']['pressure']} hPa\n"
                         f"Humidity: {current_data['main']['humidity']}%\n"
-                        f"Description: {current_data['weather'][0]['description']}")
+                        f"Description: {current_data['weather'][0]['description']}\n\n")
                 current_weather_label.config(text=text)
 
     def show_history(time_range):
@@ -155,7 +157,6 @@ def create_gui(api_key):
         canvas_widget = canvas.get_tk_widget()
         canvas_widget.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
 
-        
     root = tk.Tk()
     root.title("Weather Data Application")
 
@@ -164,7 +165,6 @@ def create_gui(api_key):
 
     current_weather_frame = ttk.Frame(main_frame)
     history_frame = ttk.Frame(main_frame)
-    predict_tomorrow_frame = ttk.Frame(main_frame)
 
     for frame in (current_weather_frame, history_frame):
         frame.grid(row=0, column=0, sticky='nsew')
@@ -172,25 +172,36 @@ def create_gui(api_key):
     current_weather_label = ttk.Label(current_weather_frame, text="", font=("Helvetica", 16))
     current_weather_label.grid(row=0, column=0, padx=20, pady=20)
 
+    predict_tomorrow_label = ttk.Label(current_weather_frame, text="", font=("Helvetica", 16), foreground="blue")
+    predict_tomorrow_label.grid(row=2, column=0, padx=20, pady=10)
+
+    dismiss_button = tk.Button(current_weather_frame, text="X", fg="red", command=lambda: predict_tomorrow_label.config(text=""))
+    dismiss_button.grid(row=2, column=1)
+
     control_frame = ttk.Frame(main_frame)
     control_frame.grid(row=1, column=0, sticky='ew')
 
     ttk.Button(control_frame, text="Current Weather", command=lambda: show_frame(current_weather_frame)).grid(row=0, column=0, padx=5, pady=5)
     ttk.Button(control_frame, text="History", command=lambda: show_frame(history_frame)).grid(row=0, column=1, padx=5, pady=5)
-    ttk.Button(control_frame, text="Predict Tomorrow", command=lambda: show_frame(predict_tomorrow_frame)).grid(row=0, column=2, padx=5, pady=5)
+    ttk.Button(control_frame, text="Predict Tomorrow", command=lambda: predict_tomorrow(predict_tomorrow_label)).grid(row=0, column=2, padx=5, pady=5)
+
     global city_name
     def on_combobox_selected(event):
-        selected_city = combobox.get()
-        # Add the following line to update the city_name variable
         global city_name
+        selected_city = combobox.get()
         city_name = selected_city
         print(f"Selected city: {selected_city}")
+
+        # Refresh the currently visible frame
+        current_frame = main_frame.winfo_children()[0]
+        show_frame(current_frame)
 
     selected_city_var = tk.StringVar()
     cities = ["Ohama", "Paris"]
     combobox = ttk.Combobox(control_frame, textvariable=selected_city_var, values=cities)
     combobox.set(cities[0])  # Default text when the ComboBox is not selected
     combobox.grid(row=0, column=3, padx=5, pady=5)
+    combobox.bind("<<ComboboxSelected>>", on_combobox_selected)
 
     def show_frame(frame):
         frame.tkraise()
@@ -198,10 +209,6 @@ def create_gui(api_key):
             refresh_current_weather()
         elif frame == history_frame:
             show_history(24)  # Default to 24 hours
-        elif frame == predict_tomorrow_frame:
-            predict_tomorrow()
-
-    combobox.bind("<<ComboboxSelected>>", on_combobox_selected)
 
     # Start the GUI with an initial city
     city_name = cities[0]
@@ -211,6 +218,8 @@ def create_gui(api_key):
     threading.Thread(target=update_weather_data, args=(api_key,), daemon=True).start()
 
     root.mainloop()
+
+
 
 def main():
     api_key = "8a7fcee2ba05b7ef550d610a92987411"
