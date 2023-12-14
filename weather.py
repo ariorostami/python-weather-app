@@ -64,7 +64,8 @@ def kelvin_to_fahrenheit(kelvin):
     fahrenheit = (kelvin - 273.15) * 9/5 + 32
     return fahrenheit
 
-def update_weather_data(api_key, city_name):
+def update_weather_data(api_key):
+    global city_name
     while True:
         weather_data = fetch_weather_data(city_name, api_key)
         if weather_data.get("cod") == 200:
@@ -77,7 +78,7 @@ def update_weather_data(api_key, city_name):
         if last_data:
             last_entry = last_data[-1]
             last_update_time = datetime.fromisoformat(last_entry['datetime'])
-            next_update_time = last_update_time + timedelta(minutes=10)
+            next_update_time = last_update_time + timedelta(minutes=1)
             current_time = datetime.now()
             if current_time >= next_update_time:
                 wait_time = 0
@@ -141,18 +142,18 @@ def create_gui(api_key):
 
     ttk.Button(control_frame, text="Current Weather", command=lambda: show_frame(current_weather_frame)).grid(row=0, column=0, padx=5, pady=5)
     ttk.Button(control_frame, text="History", command=lambda: show_frame(history_frame)).grid(row=0, column=1, padx=5, pady=5)
-    
+    global city_name
     def on_combobox_selected(event):
         selected_city = combobox.get()
         # Add the following line to update the city_name variable
-        nonlocal city_name
+        global city_name
         city_name = selected_city
         print(f"Selected city: {selected_city}")
 
     selected_city_var = tk.StringVar()
-    cities = ["Ohama", "Obama"]
+    cities = ["Ohama", "Paris"]
     combobox = ttk.Combobox(root, textvariable=selected_city_var, values=cities)
-    combobox.set("Select a city")  # Default text when the ComboBox is not selected
+    combobox.set(cities[0])  # Default text when the ComboBox is not selected
     combobox.grid(row=0, column=3, padx=10, pady=10)
 
     def show_frame(frame):
@@ -169,7 +170,7 @@ def create_gui(api_key):
 
     show_frame(current_weather_frame)
 
-    threading.Thread(target=update_weather_data, args=(api_key, city_name), daemon=True).start()
+    threading.Thread(target=update_weather_data, args=(api_key,), daemon=True).start()
 
     root.mainloop()
 
