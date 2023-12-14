@@ -137,6 +137,10 @@ def predict_tomorrow(predict_tomorrow_label):
 
 
 def create_gui(api_key):
+    def show_predict_tomorrow():
+        predict_tomorrow(predict_tomorrow_label)
+        show_frame(current_weather_frame)
+
     def refresh_current_weather():
         last_data = load_from_json()
         if last_data:
@@ -168,7 +172,7 @@ def create_gui(api_key):
     current_weather_frame = ttk.Frame(main_frame)
     history_frame = ttk.Frame(main_frame)
 
-    for frame in (current_weather_frame, history_frame, predict_tomorrow_frame):
+    for frame in (current_weather_frame, history_frame):
         frame.grid(row=0, column=0, sticky='nsew')
 
     current_weather_label = ttk.Label(current_weather_frame, text="", font=("Helvetica", 16))
@@ -185,7 +189,7 @@ def create_gui(api_key):
 
     ttk.Button(control_frame, text="Current Weather", command=lambda: show_frame(current_weather_frame)).grid(row=0, column=0, padx=5, pady=5)
     ttk.Button(control_frame, text="History", command=lambda: show_frame(history_frame)).grid(row=0, column=1, padx=5, pady=5)
-    ttk.Button(control_frame, text="Predict Tomorrow", command=lambda: predict_tomorrow(predict_tomorrow_label)).grid(row=0, column=2, padx=5, pady=5)
+    ttk.Button(control_frame, text="Predict Tomorrow", command=show_predict_tomorrow).grid(row=0, column=2, padx=5, pady=5)
 
     global city_name
     def on_combobox_selected(event):
