@@ -1,67 +1,37 @@
-import tkinter as tk
-from tkinter import ttk
-import matplotlib.pyplot as plt
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from matplotlib.figure import Figure
 import requests
 import time
-import json
 from datetime import datetime, timedelta
+from loguru import logger
+from json_connect import *
+from predict import *
+from json_connect import *
+from predict import *
 import threading
-import numpy as np
-from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import train_test_split
+import tkinter as tk
+from tkinter import ttk
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
+from weather import *
 
 def fetch_weather_data(city, api_key):
     print(city)
-    base_url = "http://api.openweathermap.org/data/2.5/weather"
+    base_url = API_URL
     complete_url = f"{base_url}?q={city}&appid={api_key}"
-    response = requests.get(complete_url)
-    return response.json()
-
-def save_to_json(data, filename="weather_data.json"):
+    # response = requests.get(complete_url)
+    # return response.json()
     try:
-        with open(filename, 'r+') as file:
-            file_data = json.load(file)
-            file_data.append(data)
-            file.seek(0)
-            json.dump(file_data, file)
-    except FileNotFoundError:
-        with open(filename, 'w') as file:
-            json.dump([data], file)
+        response = requests.get(complete_url)
+        if response.status_code == 200:
+            data = response.json()
+            logger.info(f"Successful response. Data: {str(data)[:100]}")
+            return data
+        else:
+            logger.warning(f"Failed to fetch weather data. Status code: {response.status_code}")
+            return None
+    except Exception as e:
+        logger.error(f"An error occurred while fetching weather data: {e}")
+        return None
 
-def load_from_json(filename="weather_data.json"):
-    try:
-        with open(filename, 'r') as file:
-            return json.load(file)
-    except FileNotFoundError:
-        return []
-
-def clean_old_data(filename="weather_data.json"):
-    try:
-        with open(filename, 'r+') as file:
-            file_data = json.load(file)
-            cutoff_date = datetime.now() - timedelta(days=3)
-            updated_data = [entry for entry in file_data if datetime.fromisoformat(entry['datetime']) > cutoff_date]
-            file.seek(0)
-            file.truncate()
-            json.dump(updated_data, file)
-    except FileNotFoundError:
-        pass
-
-def plot_history(data, time_range, city_name):
-    times = [datetime.fromisoformat(entry['datetime']) for entry in data if entry['name'] == city_name]
-    temperatures = [entry['main']['temp'] for entry in data if entry['name'] == city_name]
-
-    fig = Figure(figsize=(10, 4))
-    plot = fig.add_subplot(111)
-    plot.plot(times, temperatures, marker='o')
-    plot.set_xlabel('Time')
-    plot.set_ylabel('Temperature (F)')
-    plot.set_title(f'Weather History in {city_name} - Last {time_range} Hours')
-    plot.grid(True)
-
-    return fig
 
 def kelvin_to_fahrenheit(kelvin):
     fahrenheit = (kelvin - 273.15) * 9/5 + 32
@@ -102,41 +72,22 @@ def print_new_reading(data):
     print(f"Description: {data['weather'][0]['description']}")
     print(f"Time: {data['datetime']}")
 
-def predict_tomorrow():
-    try:
-        data = load_from_json()
 
-        # Extract features (X) and target variable (y)
-        dates = [datetime.fromisoformat(entry["datetime"]).timestamp() for entry in data]
-        temperatures = [entry["main"]["temp"] for entry in data]
+def plot_history(data, time_range, city_name):
+    times = [datetime.fromisoformat(entry['datetime']) for entry in data if entry['name'] == city_name]
+    temperatures = [entry['main']['temp'] for entry in data if entry['name'] == city_name]
 
-        # Reshape the data
-        X = np.array(dates).reshape(-1, 1)
-        y = np.array(temperatures)
+    fig = Figure(figsize=(10, 4))
+    plot = fig.add_subplot(111)
+    plot.plot(times, temperatures, marker='o')
+    plot.set_xlabel('Time')
+    plot.set_ylabel('Temperature (F)')
+    plot.set_title(f'Weather History in {city_name} - Last {time_range} Hours')
+    plot.grid(True)
 
-        # Split the data into training and testing sets
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+    return fig
 
-        # Create a linear regression model
-        model = LinearRegression()
-
-        # Train the model
-        model.fit(X_train, y_train)
-
-        # Predict tomorrow's temperature
-        tomorrow_date = datetime.now() + timedelta(days=1)
-        tomorrow_timestamp = tomorrow_date.timestamp()
-        tomorrow_temperature = model.predict([[tomorrow_timestamp]])
-
-        
-        print(f"Predicted temperature for tomorrow: {tomorrow_temperature[0]} °F")
-        return f"Predicted temperature for tomorrow: {tomorrow_temperature[0]} °F"
-    except Exception as e:
-        print(f"An error occurred while predicting tomorrow's temperature: {e}")
-        return f"An error occurred while predicting tomorrow's temperature: {e}"
-
-
-def create_gui(api_key):
+def create_gui(api_key, ):
     def show_predict_tomorrow_frame():
         predict_text = predict_tomorrow()
         tomorrow_weather_label.config(text=predict_text)
@@ -204,9 +155,11 @@ def create_gui(api_key):
         global city_name
         selected_city = combobox.get()
         city_name = selected_city
+
         last_data = load_from_json()
         if not any(entry.get('name') == city_name for entry in last_data):
             fetch_and_update_weather_for_city(city_name)
+
         show_frame(current_weather_frame)
 
     selected_city_var = tk.StringVar()
@@ -271,11 +224,3 @@ def load_cities_from_json(filename="cities.json"):
         return ["Ohama", "Paris"]  # Default cities
 
 
-
-def main():
-    api_key = "8a7fcee2ba05b7ef550d610a92987411"
-    # city_name = input("Enter city name: ")
-    create_gui(api_key)
-
-if __name__ == "__main__":
-    main()
