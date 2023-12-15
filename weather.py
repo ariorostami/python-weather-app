@@ -141,21 +141,58 @@ def create_gui(api_key, ):
     ttk.Button(control_frame, text="Predict Tomorrow", command=lambda: show_frame(predict_tomorrow_frame)).grid(row=0, column=2, padx=5, pady=5)
 
     global city_name
+
+    def fetch_and_update_weather_for_city(city):
+        weather_data = fetch_weather_data(city, api_key)
+        if weather_data.get("cod") == 200:
+            weather_data['main']['temp'] = kelvin_to_fahrenheit(weather_data['main']['temp'])
+            weather_data['datetime'] = datetime.now().isoformat()
+            save_to_json(weather_data)
+            print_new_reading(weather_data)
+            refresh_current_weather()
+
     def on_combobox_selected(event):
         global city_name
         selected_city = combobox.get()
         city_name = selected_city
-        print(f"Selected city: {selected_city}")
 
-        # Refresh the currently visible frame
+        last_data = load_from_json()
+        if not any(entry.get('name') == city_name for entry in last_data):
+            fetch_and_update_weather_for_city(city_name)
+
         show_frame(current_weather_frame)
 
     selected_city_var = tk.StringVar()
-    cities = ["Ohama", "Paris"]
+    cities = load_cities_from_json()  # Load cities from JSON file
     combobox = ttk.Combobox(control_frame, textvariable=selected_city_var, values=cities)
     combobox.set(cities[0])  # Default text when the ComboBox is not selected
     combobox.grid(row=0, column=3, padx=5, pady=5)
     combobox.bind("<<ComboboxSelected>>", on_combobox_selected)
+
+    def handle_city_search(event=None):
+        new_city = city_search_var.get().strip()
+        if new_city and new_city not in cities:
+            cities.append(new_city)
+            combobox.config(values=cities)
+            save_cities_to_json(cities)  # Save cities list to JSON
+        combobox.set(new_city)
+        global city_name
+        city_name = new_city
+        last_data = load_from_json()
+        if not any(entry.get('name') == city_name for entry in last_data):
+            fetch_and_update_weather_for_city(city_name)
+        show_frame(current_weather_frame)
+
+    city_search_label = ttk.Label(control_frame, text="City Search:")
+    city_search_label.grid(row=0, column=4, padx=5, pady=5)
+
+    city_search_var = tk.StringVar()
+    city_search_entry = ttk.Entry(control_frame, textvariable=city_search_var)
+    city_search_entry.grid(row=0, column=5, padx=5, pady=5)
+    city_search_entry.bind("<Return>", handle_city_search)  # Bind the Enter key
+
+    search_button = ttk.Button(control_frame, text="Search", command=handle_city_search)
+    search_button.grid(row=0, column=6, padx=5, pady=5)
 
     def show_frame(frame):
         frame.tkraise()
@@ -166,11 +203,24 @@ def create_gui(api_key, ):
         elif frame == predict_tomorrow_frame:
             show_predict_tomorrow_frame()
 
-    # Start the GUI with an initial city
     city_name = cities[0]
-
     show_frame(current_weather_frame)
 
     threading.Thread(target=update_weather_data, args=(api_key,), daemon=True).start()
 
     root.mainloop()
+
+
+
+def save_cities_to_json(cities, filename="cities.json"):
+    with open(filename, 'w') as file:
+        json.dump(cities, file)
+
+def load_cities_from_json(filename="cities.json"):
+    try:
+        with open(filename, 'r') as file:
+            return json.load(file)
+    except FileNotFoundError:
+        return ["Ohama", "Paris"]  # Default cities
+
+
