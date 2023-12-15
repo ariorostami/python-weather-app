@@ -145,6 +145,8 @@ def create_gui(api_key, ):
     def fetch_and_update_weather_for_city(city):
         weather_data = fetch_weather_data(city, api_key)
         if weather_data.get("cod") == 200:
+            global city_name
+            city_name = weather_data['name']
             weather_data['main']['temp'] = kelvin_to_fahrenheit(weather_data['main']['temp'])
             weather_data['datetime'] = datetime.now().isoformat()
             save_to_json(weather_data)
@@ -171,16 +173,17 @@ def create_gui(api_key, ):
 
     def handle_city_search(event=None):
         new_city = city_search_var.get().strip()
-        if new_city and new_city not in cities:
-            cities.append(new_city)
-            combobox.config(values=cities)
-            save_cities_to_json(cities)  # Save cities list to JSON
-        combobox.set(new_city)
+        
         global city_name
         city_name = new_city
         last_data = load_from_json()
         if not any(entry.get('name') == city_name for entry in last_data):
             fetch_and_update_weather_for_city(city_name)
+        if city_name and city_name not in cities:
+            cities.append(city_name)
+            combobox.config(values=cities)
+            save_cities_to_json(cities)  # Save cities list to JSON
+        combobox.set(city_name)
         show_frame(current_weather_frame)
 
     city_search_label = ttk.Label(control_frame, text="City Search:")
@@ -209,18 +212,5 @@ def create_gui(api_key, ):
     threading.Thread(target=update_weather_data, args=(api_key,), daemon=True).start()
 
     root.mainloop()
-
-
-
-def save_cities_to_json(cities, filename="cities.json"):
-    with open(filename, 'w') as file:
-        json.dump(cities, file)
-
-def load_cities_from_json(filename="cities.json"):
-    try:
-        with open(filename, 'r') as file:
-            return json.load(file)
-    except FileNotFoundError:
-        return ["Ohama", "Paris"]  # Default cities
 
 

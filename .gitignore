@@ -1,3 +1,4 @@
 weather_data.json
 *.log
-./logs
+logs
+__pycache__

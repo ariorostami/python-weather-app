@@ -31,3 +31,14 @@ def clean_old_data(filename=JSON_FILE_NAME):
             json.dump(updated_data, file)
     except FileNotFoundError:
         pass
+
+def save_cities_to_json(cities, filename=CITIES_FILE_NAME):
+    with open(filename, 'w') as file:
+        json.dump(cities, file)
+
+def load_cities_from_json(filename=CITIES_FILE_NAME):
+    try:
+        with open(filename, 'r') as file:
+            return json.load(file)
+    except FileNotFoundError:
+        return ["Ohama", "Paris"]  # Default cities
